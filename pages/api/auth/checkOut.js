@@ -1,43 +1,63 @@
-import initDb from '../../../helpers/initDb';
-import User from '../../../models/User'
-import jwt from 'jsonwebtoken'
+import initDb from "../../../helpers/initDb";
+import User from "../../../models/User";
+import Order from "../../../models/Order";
+import jwt from "jsonwebtoken";
 
-initDb()
+initDb();
 
+export default async (req, res) => {
+  const { authorization } = req.headers;
+  const JwtSecret = process.env.JWTSECRET;
 
+  const {
+    cart,
+    time,
+    payment,
+    comment,
+    voucher,
+    amount,
+    userid,
+    username,
+    mobile,
+    address,
+    totalitems,
+    delivered,
+    date,
+    vendors,
+  } = await req.body;
 
+  if (!authorization) {
+    return res.status(401).json({ error: "you must be logged in 1" });
+  }
 
-export default async(req,res)=>{
-    const {authorization} = req.headers
-    const JwtSecret = process.env.JWTSECRET
-    const CheckOutData = await req.body
+  try {
+    const token = await authorization.replace("Bearer ", "");
 
-    if(!authorization){
-        return res.status(401).json({error:"you must be logged in 1"})
-    }
-    if(!CheckOutData){
-        return res.status(401).json({error:"Please provide all details"})
-    }
-    
-    try{
-        
-        const token = await authorization.replace("Bearer ","")
-        
-        const {_id} = await jwt.verify(token,JwtSecret)
-        
-        await User.findByIdAndUpdate(_id,
-            { "$push": { "order": CheckOutData } },
-            { "new": true, "upsert": true }).then((resp,err )=>{
-                if(err){
-                    console.log("err",err)
-                }else{
-                    res.status(200).json({message:"Order Placed Successfully"})
-                }
-            })
-            
+    const { _id } = await jwt.verify(token, JwtSecret);
 
-        
-    }catch(err){
-        return await res.status(401).json({error:"you must be logged in 2"+err})
-    }
-}
+    var order = new Order({
+      cart,
+      time,
+      payment,
+      comment,
+      voucher,
+      amount,
+      userid,
+      username,
+      mobile,
+      address,
+      totalitems,
+      delivered,
+      date,
+      vendors,
+    });
+
+    order.save().then(() => {
+      return res.json({ message: "Order Placed Successfully" });
+    });
+  } catch (err) {
+    return await res
+      .status(401)
+      .json({ error: "you must be logged in 2" + err });
+  }
+};
